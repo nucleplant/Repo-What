@@ -3,20 +3,22 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf8">
 	<link rel="stylesheet" href="http://www.duoh.com/csstutorials/csstables/styles.css" />
-	<title>오늘({{content.date}})의 점심 식단 입니다.</title>
+	<title>[{{todaysmeal.date}}] 이-건-머-지 ?</title>
 </head>
 
 <body>
+<h1>[{{todaysmeal.date}}] 이-건-머-지 ?</h1>
+<hr>
 <div id = 'lunch'>
-	<p>오늘({{content.date}})의 점심 식단 입니다.</p>
+	<h2>오늘의 점심 식단 입니다.</h2>
 	<table>
 		<tr>
-		{% for meal in content.lunch %}
+		{% for meal in todaysmeal.lunch %}
 		<th  scope="col">{{meal.course_name}}</th>
 		{% endfor %}
 		</tr>	
 		<tr>
-		{% for meal in content.lunch %}
+		{% for meal in todaysmeal.lunch %}
 		<td>
 			{% for menu_element in meal.menu_elements %}
 			{% if menu_element.element_name != '.' %}
@@ -28,13 +30,19 @@
 		</tr>
 	</table>
 </div>
-<hr>
-<div id = 'webtoon1'>
-	<p>오늘의 웹툰: {{title1}} </p>
-	{% for img in webtoon1 %}
-	<p><img src = {{img}}></p>	
+<br><hr>
+
+{% for webtoon in webtoons %}
+<div id = '{{webtoon.title}}'>
+	<h2>오늘의 웹툰: {{webtoon.title}} ({{webtoon.subtitle}}) </h2>
+	{% for img in webtoon.imglist %}
+	<img src = {{img}}><BR>	
 	{% endfor %}
 </div>
+<br><hr>
+{% endfor %}
+
+
 </body>
 
 </html>

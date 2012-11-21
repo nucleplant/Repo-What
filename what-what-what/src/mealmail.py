@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os, httplib2, urllib, logging, json, webapp2, jinja2, BeautifulSoup
+import os, httplib2, urllib, logging, json, webapp2, jinja2, BeautifulSoup, base64
 from google.appengine.api import mail
 from datetime import tzinfo, timedelta, datetime
 
@@ -15,6 +15,8 @@ class Seoul_tzinfo(tzinfo):
         return timedelta(0)
     
 today = datetime.now(Seoul_tzinfo()).strftime("%Y-%m-%d")
+weekName = datetime.now(Seoul_tzinfo()).strftime("%a")
+
 
 
 def postAction(http, url, body):
@@ -42,42 +44,71 @@ def postAction(http, url, body):
         logging.exception("Exception : %s ", str(url +' (Post)'+ body))        
         return False
 
-
 def sendMail(to, sbj, html):
     mail.send_mail(sender='what@what-what-what.appspotmail.com', to = to, subject = sbj, body = '', html = html)
 
-def naverWebtoon():
-    data = urllib.urlopen('http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue')
+def img2base64(url):
+    data_uri = urllib.urlopen(url).read().encode('base64').replace('\n', '')
+    img_tag = '"data:image/jpeg;base64,{0}"'.format(data_uri)
+    return img_tag
+
+def naverWebtoon(url):
+    data = urllib.urlopen(url)
     soup = BeautifulSoup.BeautifulSoup(data)
     cartoons = soup.findAll('td', attrs={'class':'title'})
     lastTitle = cartoons[0].find('a').text
     lastLink = cartoons[0].find('a')['href']
     
     title = soup.find('div', attrs={'class':'comicinfo'}).find('img')['title']
-    title += ' ('+lastTitle+')'
+#    title += ' ('+lastTitle+')'
     
     data = urllib.urlopen('http://comic.naver.com'+lastLink)
     soup = BeautifulSoup.BeautifulSoup(data)
     imglinks = soup.find('div', attrs={'class':'wt_viewer'}).findAll('img')
     imglist = []
     for imglink in imglinks:
-        imglist.append(imglink['src'])         
-    return title, imglist
-     
-def genHTML():        
+        imglist.append(img2base64(imglink['src']))
+    
+    webtoon={}    
+    webtoon['title'] = title
+    webtoon['subtitle'] = lastTitle
+    webtoon['imglist'] = imglist
+    return webtoon
+
+def webtoons():
+    webtoonList=[]
+#    urls = ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue']
+    weekurls = {'Mon': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
+                        'http://comic.naver.com/webtoon/list.nhn?titleId=25613&weekday=mon'],
+                'Tue': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
+                        'http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=tue'],
+                'Wed': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
+                        'http://comic.naver.com/webtoon/list.nhn?titleId=103759&weekday=wed'],
+                'Thu': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
+                        'http://comic.naver.com/webtoon/list.nhn?titleId=507275&weekday=thu'],
+                'Fri': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
+                        'http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=fri'],
+                'Sat': ['http://comic.naver.com/webtoon/list.nhn?titleId=25613&weekday=sat'],
+                'Sun': ['http://comic.naver.com/webtoon/list.nhn?titleId=26316&weekday=sun']                
+                }
+#    urls = weekurls[weekName]    
+    
+    for url in weekurls[weekName]:
+        webtoonList.append(naverWebtoon(url))
+    return webtoonList
+
+def todaysmeal():
     http = httplib2.Http()
     url = 'http://www.welstory.com/mobile/menu_today.jsp'
     body = {'hall_no': 'E329' , 'date': today, 'device': 'iphone' }
-    content= postAction(http, url, urllib.urlencode(body))
-
-    title1, imglist1 = naverWebtoon()
+    return postAction(http, url, urllib.urlencode(body))
     
+     
+def genHTML():        
     template_values = {
-        'content' : content,
-        'title1' : title1,
-        'webtoon1' : imglist1,
-    }
-    
+        'todaysmeal' : todaysmeal(),
+        'webtoons' : webtoons(),
+    }    
     template = jinja_environment.get_template('lunchmail.html')
     return template.render(template_values)
 
