@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf8">
+	<link rel="stylesheet" href="http://www.duoh.com/csstutorials/csstables/styles.css" />
+	<title>오늘({{content.date}})의 점심 식단 입니다.</title>
+</head>
+
+<body>
+<div id = 'lunch'>
+	<p>오늘({{content.date}})의 점심 식단 입니다.</p>
+	<table>
+		<tr>
+		{% for meal in content.lunch %}
+		<th  scope="col">{{meal.course_name}}</th>
+		{% endfor %}
+		</tr>	
+		<tr>
+		{% for meal in content.lunch %}
+		<td>
+			{% for menu_element in meal.menu_elements %}
+			{% if menu_element.element_name != '.' %}
+				{{ menu_element.element_name }}<br>
+			{% endif %}	
+			{% endfor %}
+		</td>
+		{% endfor %}
+		</tr>
+	</table>
+</div>
+<hr>
+<div id = 'webtoon1'>
+	<p>오늘의 웹툰: {{title1}} </p>
+	{% for img in webtoon1 %}
+	<p><img src = {{img}}></p>	
+	{% endfor %}
+</div>
+</body>
+
+</html>

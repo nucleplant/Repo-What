@@ -1,0 +1,10 @@
+cron:
+
+- description: Lunch Batch (Every day 11:45)
+  url: /meal/mail
+  schedule: every day 11:45
+  timezone: Asia/Seoul 
+
+
+
+
