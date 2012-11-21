@@ -2,6 +2,7 @@
 
 import os, httplib2, urllib, logging, json, webapp2, jinja2, BeautifulSoup, base64
 from google.appengine.api import mail
+from google.appengine.api import taskqueue
 from datetime import tzinfo, timedelta, datetime
 
 
@@ -48,7 +49,19 @@ def sendMail(to, sbj, html):
     mail.send_mail(sender='what@what-what-what.appspotmail.com', to = to, subject = sbj, body = '', html = html)
 
 def img2base64(url):
-    data_uri = urllib.urlopen(url).read().encode('base64').replace('\n', '')
+    http = httplib2.Http()
+    headers = {'referer': 'http://comic.naver.com/webtoon/',
+               'Accept-Language': 'ko-kr',
+               'Connection': 'keep-alive',
+               'Proxy-Connection': 'keep-alive',
+               'User-Agent': 'Mozilla/4.0 (compatible;)'}        
+    response, content = http.request(url, 'GET', headers=headers, body='')
+    
+    
+    data_uri = content.encode('base64').replace('\n', '')
+    
+#    data_uri = urllib.urlopen(url).read().encode('base64').replace('\n', '')
+    
     img_tag = '"data:image/jpeg;base64,{0}"'.format(data_uri)
     return img_tag
 
@@ -78,16 +91,11 @@ def naverWebtoon(url):
 def webtoons():
     webtoonList=[]
 #    urls = ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue']
-    weekurls = {'Mon': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
-                        'http://comic.naver.com/webtoon/list.nhn?titleId=25613&weekday=mon'],
-                'Tue': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
-                        'http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=tue'],
-                'Wed': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
-                        'http://comic.naver.com/webtoon/list.nhn?titleId=103759&weekday=wed'],
-                'Thu': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
-                        'http://comic.naver.com/webtoon/list.nhn?titleId=507275&weekday=thu'],
-                'Fri': ['http://comic.naver.com/webtoon/list.nhn?titleId=335885&weekday=tue',
-                        'http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=fri'],
+    weekurls = {'Mon': ['http://comic.naver.com/webtoon/list.nhn?titleId=25613&weekday=mon'],
+                'Tue': ['http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=tue'],
+                'Wed': ['http://comic.naver.com/webtoon/list.nhn?titleId=103759&weekday=wed'],
+                'Thu': ['http://comic.naver.com/webtoon/list.nhn?titleId=507275&weekday=thu'],
+                'Fri': ['http://comic.naver.com/webtoon/list.nhn?titleId=20853&weekday=fri'],
                 'Sat': ['http://comic.naver.com/webtoon/list.nhn?titleId=25613&weekday=sat'],
                 'Sun': ['http://comic.naver.com/webtoon/list.nhn?titleId=26316&weekday=sun']                
                 }
@@ -112,10 +120,21 @@ def genHTML():
     template = jinja_environment.get_template('lunchmail.html')
     return template.render(template_values)
 
-class MealMail(webapp2.RequestHandler):
-    def get(self):        
-        revList = ['lovedino@gmail.com','wonjeon.ahn@gmail.com', 'erimpre@gmail.com', 'seungryun.lee@samsung.com', 'wonjeon.ahn@samsung.com','ym1127.park@samsung.com']        
+class MealMailTask(webapp2.RequestHandler):
+    def post(self):
+        mode = self.request.get('mode')
+        if mode == 'debug':
+            revList = ['lovedino@gmail.com']
+        else:                    
+            revList = ['lovedino@gmail.com','wonjeon.ahn@gmail.com', 'erimpre@gmail.com', 'seungryun.lee@samsung.com', 'wonjeon.ahn@samsung.com','ym1127.park@samsung.com']        
         sendMail( revList,  '['+ today + u'] 이-건-뭐-지-?', genHTML())            
+
+class MealMail(webapp2.RequestHandler):
+    def get(self):
+        mode = self.request.get('mode')        
+        taskqueue.add(url="/meal/mail/task", params={'mode': mode})
+        self.response.out.write( u"""<HTML><body>메일발송! """+mode+"""</body></HTML>""") 
+         
 
 class MealWeb(webapp2.RequestHandler):
     def get(self):        
@@ -123,6 +142,7 @@ class MealWeb(webapp2.RequestHandler):
 
 
 app = webapp2.WSGIApplication([('/meal/mail', MealMail),
+                               ('/meal/mail/task', MealMailTask),
                                ('/meal/web', MealWeb),
                                                              
                                ], debug=True)
